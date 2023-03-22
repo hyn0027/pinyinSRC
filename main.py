@@ -3,7 +3,7 @@ from tools.log import *
 
 def main():
     args = parseArg()
-    logger = getLogger(args=args, name="train")
+    logger = getLogger(args=args, name="main")
     logger.info(args)
 
 if __name__ == '__main__':
