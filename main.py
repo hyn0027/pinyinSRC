@@ -13,10 +13,10 @@ def main():
             if deleteFile(args.word_freq):
                 logger.info("successfully removed frequency file %s", args.word_freq)
             else:
-                logger.warning("find no word freqenct file")
+                logger.warning("failed to find word freqency file")
         case "train":
-            wordSet, wordDict = loadWordList(args)
-            trainOnCorpus(args, wordSet)
+            wordSet, _ = loadWordList(args)
+            wordFreq = trainOnCorpus(args, wordSet)
         case "run":
             wordSet, wordDict = loadWordList(args)
 
