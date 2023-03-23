@@ -41,3 +41,8 @@ def writeJsonFile(filePath, content, encoding="cp936"):
     jsonObject = json.dumps(content, indent=4)
     with open(filePath, mode='w', encoding=encoding) as f:
         f.write(jsonObject)
+
+def writeToFile(filePath, content, encoding="cp936"):
+    with open(filePath, mode='w', encoding=encoding) as f:
+        for item in content:
+            f.write(item + '\n')

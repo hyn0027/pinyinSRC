@@ -1,6 +1,7 @@
 from utils.file import *
-from utils.log import getLogger
+from utils.log import getLogger, TqdmLoggingHandler
 from math import log
+import tqdm
 
 def loadInput(args):
     logger = getLogger(args, "loadInput")
@@ -61,8 +62,15 @@ def inferSingle(args, snt, wordDict, wordFreq):
     return result
 
 def infer(args, input, wordDict, wordFreq):
+    logger = getLogger(args, "infer")
+    logger.info("begin infering")
     output = []
-    for snt in input:
-        print(' '.join(snt))
+    log = getLogger(args, "inferTqdm", False)
+    log.addHandler(TqdmLoggingHandler())
+    for i in tqdm.tqdm(range(len(input))):
+        snt = input[i]
         result = inferSingle(args, snt, wordDict, wordFreq)
-        print(result)
+        output.append(result)
+    logger.info("successfully inferred %d sentences", len(input))
+    writeToFile(args.output, output, encoding="utf8")
+    logger.info("succcessfully write results to %s", args.output)

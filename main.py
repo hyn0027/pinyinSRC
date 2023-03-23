@@ -24,7 +24,7 @@ def main():
             wordFreq = readJsonFile(args.word_freq, encoding="utf8")
             logger.info("successfully loaded %d entries from %s", len(wordFreq), args.word_freq)
             input = loadInput(args)
-            result = infer(args, input, wordDict, wordFreq)
+            infer(args, input, wordDict, wordFreq)
 
 if __name__ == '__main__':
     main()
