@@ -3,7 +3,8 @@ from utils.log import *
 from loadWord import loadWordList
 from utils.file import *
 from loadCorpus import trainOnCorpus
-from infer import loadInput, infer
+from infer import infer
+from evaluate import computeMetrics
 
 def main():
     args = parseArg()
@@ -21,10 +22,9 @@ def main():
             trainOnCorpus(args, wordSet)
         case "infer":
             _, wordDict = loadWordList(args)
-            wordFreq = readJsonFile(args.word_freq, encoding="utf8")
-            logger.info("successfully loaded %d entries from %s", len(wordFreq), args.word_freq)
-            input = loadInput(args)
-            infer(args, input, wordDict, wordFreq)
+            infer(args, wordDict)
+        case "evaluate":
+            computeMetrics(args)
 
 if __name__ == '__main__':
     main()

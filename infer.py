@@ -61,8 +61,11 @@ def inferSingle(args, snt, wordDict, wordFreq):
         idx -= 1
     return result
 
-def infer(args, input, wordDict, wordFreq):
+def infer(args, wordDict):
     logger = getLogger(args, "infer")
+    wordFreq = readJsonFile(args.word_freq, encoding="utf8")
+    logger.info("successfully loaded %d word entries from %s", len(wordFreq), args.word_freq)
+    input = loadInput(args)
     logger.info("begin infering")
     output = []
     log = getLogger(args, "inferTqdm", False)

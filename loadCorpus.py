@@ -21,6 +21,26 @@ def loadSinaCorpus(args, logger):
     logger.info("loading finished, %d sentences ready from Sina News Corpus", len(sinaCorpus))
     return sinaCorpus
 
+def loadSmpCorpus(args, logger):
+    import glob
+    smpCorpus = []
+    fileList = glob.glob(args.smp + "/"+ "*.txt")
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
+        dataList = pool.map(readJsonStrings, fileList)
+        for i in range(len(dataList)):
+            data = dataList[i]
+            if (data != False):
+                logger.info("successfully load %d sentences from %s", len(data), fileList[i])
+            else:
+                logger.error("failed to read valid json from file %s", fileList[i])
+                exit(-1)
+            smpCorpus += data
+    for i in range(len(smpCorpus)):
+        smpCorpus[i] = smpCorpus[i]["content"]
+    logger.info("loading finished, %d sentences ready from SMP Corpus", len(smpCorpus))
+    return smpCorpus
+
+
 def processList(corpus, wordSet, processID, total, processCnt, lock, interval):
     logger = getLogger("INFO", "computing corpus process " + str(processID))
     wordFreq = dict()
@@ -81,7 +101,7 @@ def trainOnCorpus(args, wordSet):
     logger = getLogger(args, "corpus")
     wordFreq = readJsonFile(args.word_freq, encoding="utf8")
     logger.info("successfully loaded %d entries from %s", len(wordFreq), args.word_freq)
-    if (args.sina_news):
+    if args.sina_news:
         sinaCorpus = loadSinaCorpus(args, logger)
         corpusName = "Sina News"
         deltaFreq = process(args, sinaCorpus, wordSet, logger, corpusName)
@@ -91,6 +111,15 @@ def trainOnCorpus(args, wordSet):
             else:
                 wordFreq[key] = deltaFreq[key]
         logger.info("All data from %s integrated with loaded frequency", corpusName)
-    
+    if args.smp:
+        smpCorpus = loadSmpCorpus(args, logger)
+        corpusName = "SMP"
+        deltaFreq = process(args, smpCorpus, wordSet, logger, corpusName)
+        for key in deltaFreq:
+            if key in wordFreq:
+                wordFreq[key] += deltaFreq[key]
+            else:
+                wordFreq[key] = deltaFreq[key]
+        logger.info("All data from %s integrated with loaded frequency", corpusName)
     writeJsonFile(args.word_freq, wordFreq, encoding="utf8")
     logger.info("successfully writed %d entries to word frequency file", len(wordFreq))

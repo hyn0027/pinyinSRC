@@ -1,4 +1,5 @@
 import json
+import ast
 
 def readFile(filePath, encoding="cp936"):
     try:
@@ -16,7 +17,6 @@ def deleteFile(filePath):
     return False
 
 def readJsonStrings(filePath, encoding="cp936"):
-    import json
     try:
         with open(filePath, mode='r', encoding=encoding) as f:
             datas = f.readlines()
@@ -25,7 +25,10 @@ def readJsonStrings(filePath, encoding="cp936"):
                 try:
                     dataSet.append(json.loads(item))
                 except:
-                    return False
+                    try:
+                        dataSet.append(ast.literal_eval(item))
+                    except:
+                        return False
             return dataSet
     except:
         return dict()
