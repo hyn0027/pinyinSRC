@@ -1,12 +1,12 @@
 from utils.file import *
 from utils.log import *
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool, Manager, cpu_count
 
 def loadSinaCorpus(args, logger):
     import glob
     sinaCorpus = []
     fileList = glob.glob(args.sina_news + "/2016*.txt")
-    with Pool(processes=args.max_process) as pool:
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
         dataList = pool.map(readJsonStrings, fileList)
         for i in range(len(dataList)):
             data = dataList[i]
@@ -58,7 +58,7 @@ def process(args, corpus, wordSet, logger, corpusName):
         processingArg.append((corpus[l:r], wordSet, i, len(corpus), processCnt, lock, args.report_interval))
         segment.append([l, r])
     wordFreq = dict()
-    with Pool(processes=args.max_process) as pool:
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
         dataList = pool.starmap(processList, processingArg)
         logger.info("All %d sentences in %s successfully processed", len(corpus), corpusName)
         for i in range(len(dataList)):
@@ -74,6 +74,7 @@ def process(args, corpus, wordSet, logger, corpusName):
 def trainOnCorpus(args, wordSet):
     logger = getLogger(args, "corpus")
     wordFreq = readJsonFile(args.word_freq, encoding="utf8")
+    logger.info("successfully loaded %d entries from word frequency file", len(wordFreq))
     if (args.sina_news):
         sinaCorpus = loadSinaCorpus(args, logger)
         corpusName = "sinaNews"
@@ -84,5 +85,6 @@ def trainOnCorpus(args, wordSet):
             else:
                 wordFreq[key] = deltaFreq[key]
         logger.info("All data from %s integrated with loaded frequency", corpusName)
-    return wordFreq
-        
+    
+    writeJsonFile(args.word_freq, wordFreq, encoding="utf8")
+    logger.info("successfully writed %d entries to word frequency file", len(wordFreq))

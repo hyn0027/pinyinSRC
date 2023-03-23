@@ -16,7 +16,7 @@ def main():
                 logger.warning("failed to find word freqency file")
         case "train":
             wordSet, _ = loadWordList(args)
-            wordFreq = trainOnCorpus(args, wordSet)
+            trainOnCorpus(args, wordSet)
         case "run":
             wordSet, wordDict = loadWordList(args)
 

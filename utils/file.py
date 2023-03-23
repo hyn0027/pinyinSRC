@@ -1,3 +1,5 @@
+import json
+
 def readFile(filePath, encoding="cp936"):
     try:
         with open(filePath, mode='r', encoding=encoding) as f:
@@ -28,11 +30,14 @@ def readJsonStrings(filePath, encoding="cp936"):
     except:
         return dict()
 
-
 def readJsonFile(filePath, encoding="cp936"):
-    import json
     try:
         with open(filePath, mode='r', encoding=encoding) as f:
             return json.load(f)
     except:
         return {}
+    
+def writeJsonFile(filePath, content, encoding="cp936"):
+    jsonObject = json.dumps(content, indent=4)
+    with open(filePath, mode='w', encoding=encoding) as f:
+        f.write(jsonObject)
