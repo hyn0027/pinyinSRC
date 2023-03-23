@@ -26,6 +26,12 @@ def processList(corpus, wordSet, processID, total, processCnt, lock, interval):
     wordFreq = dict()
     cnt = 0
     for snt in corpus:
+        for character in snt:
+            if character in wordSet:
+                if character in wordFreq:
+                    wordFreq[character] += 1
+                else:
+                    wordFreq[character] = 1
         for i in range(1, len(snt)):
             if snt[i - 1] in wordSet and snt[i] in wordSet:
                 if snt[i - 1: i + 1] in wordFreq:
@@ -74,10 +80,10 @@ def process(args, corpus, wordSet, logger, corpusName):
 def trainOnCorpus(args, wordSet):
     logger = getLogger(args, "corpus")
     wordFreq = readJsonFile(args.word_freq, encoding="utf8")
-    logger.info("successfully loaded %d entries from word frequency file", len(wordFreq))
+    logger.info("successfully loaded %d entries from %s", len(wordFreq), args.word_freq)
     if (args.sina_news):
         sinaCorpus = loadSinaCorpus(args, logger)
-        corpusName = "sinaNews"
+        corpusName = "Sina News"
         deltaFreq = process(args, sinaCorpus, wordSet, logger, corpusName)
         for key in deltaFreq:
             if key in wordFreq:

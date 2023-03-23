@@ -13,18 +13,16 @@ def loadPronounciation(args, wordSet, logger):
                 refWord.add(pronounciation[i])
         if len(refWord) > 0:
             pronounceDict[pronounce] = refWord
-    logger.info("load %d pronounciations in total", len(pronounceDict))
+    logger.info("load %d pronounciations in total from %s", len(pronounceDict), args.pronounciation)
     return pronounceDict
-
 
 def loadWords(args, logger):
     words = readFile(args.word_list)
     wordSet = set()
     for word in words[0]:
         wordSet.add(word)
-    logger.info("load %d words in total", len(wordSet))
+    logger.info("load %d words in total from %s", len(wordSet), args.word_list)
     return wordSet
-
 
 def loadWordList(args):
     logger = getLogger(args=args, name="loadWord")
