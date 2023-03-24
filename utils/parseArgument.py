@@ -49,7 +49,7 @@ def addArg(parser):
                         help="the infinitelt long path")
     parser.add_argument("--infer-num", choices=[2, 3], default=3, \
                         help="inferring based on word pairs or word triplets ")
-    parser.add_argument("--hash-mod", default=13, \
+    parser.add_argument("--hash-mod", default=20, \
                         help="a factor for hash")
     parser.add_argument("--hash-p", default=7, \
                         help="a factor for hash")
@@ -59,5 +59,5 @@ def addArg(parser):
                         help="the path to dictionary")
     parser.add_argument("--add-dict", type=bool, default=True, \
                         help="whether to use pinyin frequency from dictionary or not")
-    parser.add_argument("--dict-smooth", type=float, default=0.2, \
+    parser.add_argument("--dict-smooth", type=float, default=0.1, \
                         help="to what extent the effect of dictionary is smoothed")

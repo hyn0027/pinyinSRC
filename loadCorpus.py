@@ -43,6 +43,28 @@ def loadSmpCorpus(args, logger):
     logger.info("loading finished, %d sentences ready from SMP Corpus", len(smpCorpus))
     return smpCorpus
 
+def loadBaikeCorpus(args, logger):
+    import glob
+    baikeCorpus = []
+    fileList = glob.glob(args.baike + "/"+ "*.json") 
+    processingArg = []
+    for item in fileList:
+        processingArg.append((item, "utf8"))
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
+        dataList = pool.starmap(readJsonStrings, processingArg)
+        for i in range(len(dataList)):
+            data = dataList[i]
+            if (data != False):
+                logger.info("successfully loaded %d sentences from %s", len(data), fileList[i])
+            else:
+                logger.error("failed to read valid json from file %s", fileList[i])
+                exit(-1)
+            baikeCorpus += data
+    for i in range(len(baikeCorpus)):
+        baikeCorpus[i] = baikeCorpus[i]["desc"] + " " + baikeCorpus[i]["answer"]
+    logger.info("loading finished, %d sentences ready from SMP Corpus", len(baikeCorpus))
+    return baikeCorpus
+
 def loadWikiCorpus(args, logger):
     import glob
     wikiCorpus = []
@@ -179,6 +201,8 @@ def trainOnCorpus(args, wordSet):
         corpus += loadSmpCorpus(args, logger)
     if args.wiki:
         corpus += loadWikiCorpus(args, logger)
+    if args.baike:
+        corpus += loadBaikeCorpus(args, logger)
     if len(corpus) > 0:
         random.shuffle(corpus)
         logger.info("%d sentences in total", len(corpus))
