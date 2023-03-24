@@ -200,7 +200,7 @@ def trainOnCorpus(args, wordSet):
     processingArg = []
     totalWordFreq = 0
     for i in range(args.hash_mod):
-        processingArg.append((args.word_freq + "wordFreq" + str(i) + ".txt", wordFreq[i], "utf8"))
+        processingArg.append((args.word_freq + "/wordFreq" + str(i) + ".txt", wordFreq[i], "utf8"))
         totalWordFreq += len(wordFreq[i])
     with Pool(processes=min(args.max_process, cpu_count())) as p:
         wordFreq = p.starmap(writeJsonFile, processingArg)

@@ -5,6 +5,7 @@ from utils.file import *
 from loadCorpus import trainOnCorpus
 from infer import infer
 from evaluate import computeMetrics
+from dictionary import addDictionary
 
 def main():
     args = parseArg()
@@ -22,6 +23,9 @@ def main():
         case "train":
             wordSet, _ = loadWordList(args)
             trainOnCorpus(args, wordSet)
+        case "dictionary":
+            wordSet, wordDict = loadWordList(args)
+            addDictionary(args, wordSet, wordDict)
         case "infer":
             _, wordDict = loadWordList(args)
             infer(args, wordDict)
