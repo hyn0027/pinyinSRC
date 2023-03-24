@@ -2,6 +2,8 @@ from utils.file import *
 from utils.log import getLogger, TqdmLoggingHandler
 from math import log
 import tqdm
+from multiprocessing import Pool, Manager, cpu_count
+from utils.hashString import *
 
 def loadInput(args):
     logger = getLogger(args, "loadInput")
@@ -11,47 +13,48 @@ def loadInput(args):
     logger.info("successfully loaded %d input from %s", len(input), args.input)
     return input
 
-def checkFreq(wordFreq, key):
-    if key in wordFreq:
-        return wordFreq[key]
+def checkFreq(args, wordFreq, key):
+    hashNum = hashString(args, key)
+    if key in wordFreq[hashNum]:
+        return wordFreq[hashNum][key]
     return 0
 
 def loss(args, char1, char2, pinyin2, wordDict, wordFreq):
     sumOfPinyin2 = 0
     for item in wordDict[pinyin2]:
-        sumOfPinyin2 += checkFreq(wordFreq, item)
+        sumOfPinyin2 += checkFreq(args, wordFreq, item)
     if sumOfPinyin2 == 0:
         Pwi = 1.0 / len(wordDict[pinyin2])
     else:
-        Pwi = float(checkFreq(wordFreq, char2)) / sumOfPinyin2
-    sumOfChar1 = checkFreq(wordFreq, char1)
+        Pwi = float(checkFreq(args, wordFreq, char2)) / sumOfPinyin2
+    sumOfChar1 = checkFreq(args, wordFreq, char1)
     if sumOfChar1 == 0:
         Pwiwi_1 = Pwi
     else:
-        Pwiwi_1 = float(checkFreq(wordFreq, char1 + char2)) / sumOfChar1
+        Pwiwi_1 = float(checkFreq(args, wordFreq, char1 + char2)) / sumOfChar1
     p = args.smooth_lambda * Pwiwi_1 + (1 - args.smooth_lambda) * Pwi
     return -log(max(p, args.epsilon))
 
 def tripleLoss(args, words, pinyin, wordDict, wordFreq):
     sumOfPinyin3 = 0
     for item in wordDict[pinyin]:
-        sumOfPinyin3 += checkFreq(wordFreq, item)
+        sumOfPinyin3 += checkFreq(args, wordFreq, item)
     if sumOfPinyin3 == 0:
         Pwi = 1.0 / len(wordDict[pinyin])
     else:
-        Pwi = float(checkFreq(wordFreq, words[2])) / sumOfPinyin3
+        Pwi = float(checkFreq(args, wordFreq, words[2])) / sumOfPinyin3
     
-    sumOfChar2 = checkFreq(wordFreq, words[1])
+    sumOfChar2 = checkFreq(args, wordFreq, words[1])
     if sumOfChar2 == 0:
         Pwiwi_1 = Pwi
     else:
-        Pwiwi_1 = float(checkFreq(wordFreq, words[1:])) / sumOfChar2
+        Pwiwi_1 = float(checkFreq(args, wordFreq, words[1:])) / sumOfChar2
     
-    sumOfChar12 = checkFreq(wordFreq, words[:2])
+    sumOfChar12 = checkFreq(args, wordFreq, words[:2])
     if sumOfChar12 == 0:
         Pwiwi_1w_2 = Pwiwi_1
     else:
-        Pwiwi_1w_2 = float(checkFreq(wordFreq, words)) / sumOfChar12
+        Pwiwi_1w_2 = float(checkFreq(args, wordFreq, words)) / sumOfChar12
 
     p = args.smooth_lambda1 * Pwiwi_1w_2 + args.smooth_lambda2 * Pwiwi_1 \
         + (1 - args.smooth_lambda1 - args.smooth_lambda2) * Pwi
@@ -117,8 +120,15 @@ def inferSingle(args, snt, wordDict, wordFreq):
 
 def infer(args, wordDict):
     logger = getLogger(args, "infer")
-    wordFreq = readJsonFile(args.word_freq, encoding="utf8")
-    logger.info("successfully loaded %d word entries from %s", len(wordFreq), args.word_freq)
+    processingArg = []
+    totalWordFreq = 0
+    for i in range(args.hash_mod):
+        processingArg.append((args.word_freq + "wordFreq" + str(i) + ".txt", "utf8"))
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
+        wordFreq = pool.starmap(readJsonFile, processingArg)
+        for item in wordFreq:
+            totalWordFreq += len(item)
+    logger.info("successfully loaded %d entries from %s", totalWordFreq, args.word_freq)
     input = loadInput(args)
     logger.info("begin inferring")
     output = []

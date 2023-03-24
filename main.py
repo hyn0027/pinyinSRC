@@ -13,10 +13,12 @@ def main():
     match args.task:
         case "clean":
             logger = getLogger(args=args, name="clean")
-            if deleteFile(args.word_freq):
-                logger.info("successfully removed frequency file %s", args.word_freq)
-            else:
-                logger.warning("failed to find word freqency file")
+            for i in range(args.hash_mod):
+                fileName = args.word_freq + "wordFreq" + str(i) + ".txt"
+                if deleteFile(fileName):
+                    logger.info("successfully removed frequency file %s", fileName)
+                else:
+                    logger.warning("failed to find word freqency file")
         case "train":
             wordSet, _ = loadWordList(args)
             trainOnCorpus(args, wordSet)

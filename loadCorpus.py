@@ -2,6 +2,8 @@ from utils.file import *
 from utils.log import *
 from multiprocessing import Pool, Manager, cpu_count
 from collections import Counter
+from utils.hashString import *
+import random
 
 def loadSinaCorpus(args, logger):
     import glob
@@ -12,7 +14,7 @@ def loadSinaCorpus(args, logger):
         for i in range(len(dataList)):
             data = dataList[i]
             if (data != False):
-                logger.info("successfully load %d sentences from %s", len(data), fileList[i])
+                logger.info("successfully loaded %d sentences from %s", len(data), fileList[i])
             else:
                 logger.error("failed to read valid json from file %s", fileList[i])
                 exit(-1)
@@ -31,7 +33,7 @@ def loadSmpCorpus(args, logger):
         for i in range(len(dataList)):
             data = dataList[i]
             if (data != False):
-                logger.info("successfully load %d sentences from %s", len(data), fileList[i])
+                logger.info("successfully loaded %d sentences from %s", len(data), fileList[i])
             else:
                 logger.error("failed to read valid json from file %s", fileList[i])
                 exit(-1)
@@ -53,40 +55,47 @@ def loadWikiCorpus(args, logger):
         for i in range(len(dataList)):
             data = dataList[i]
             if (data != False):
-                logger.info("successfully load %d sentences from %s", len(data), fileList[i])
+                logger.info("successfully loaded %d sentences from %s", len(data), fileList[i])
             else:
                 logger.error("failed to read valid json from file %s", fileList[i])
                 exit(-1)
             wikiCorpus += data
+    title = []
     for i in range(len(wikiCorpus)):
+        title.append(wikiCorpus[i]["title"])
         wikiCorpus[i] = wikiCorpus[i]["text"]
     logger.info("loading finished, %d sentences ready from wiki-zh Corpus", len(wikiCorpus))
-    return wikiCorpus
+    return wikiCorpus + title
 
 def processList(args, corpus, wordSet, processID, total, processCnt, lock, interval):
     logger = getLogger("INFO", "computing corpus process " + str(processID))
-    wordFreq = dict()
+    wordFreq = []
+    for i in range(args.hash_mod):
+        wordFreq.append(dict())
     cnt = 0
     for snt in corpus:
         for character in snt:
             if character in wordSet:
-                if character in wordFreq:
-                    wordFreq[character] += 1
+                hashRes = hashString(args, character)
+                if character in wordFreq[hashRes]:
+                    wordFreq[hashRes][character] += 1
                 else:
-                    wordFreq[character] = 1
+                    wordFreq[hashRes][character] = 1
         for i in range(1, len(snt)):
             if snt[i - 1] in wordSet and snt[i] in wordSet:
-                if snt[i - 1: i + 1] in wordFreq:
-                    wordFreq[snt[i - 1: i + 1]] += 1
+                hashRes = hashString(args, snt[i - 1: i + 1])
+                if snt[i - 1: i + 1] in wordFreq[hashRes]:
+                    wordFreq[hashRes][snt[i - 1: i + 1]] += 1
                 else:
-                    wordFreq[snt[i - 1: i + 1]] = 1
+                    wordFreq[hashRes][snt[i - 1: i + 1]] = 1
         if args.infer_num == 3:
             for i in range(2, len(snt)):
                 if snt[i - 2] in wordSet and snt[i - 1] in wordSet and snt[i] in wordSet:
-                    if snt[i - 2: i + 1] in wordFreq:
-                        wordFreq[snt[i - 2: i + 1]] += 1
+                    hashRes = hashString(args, snt[i - 2: i + 1])
+                    if snt[i - 2: i + 1] in wordFreq[hashRes]:
+                        wordFreq[hashRes][snt[i - 2: i + 1]] += 1
                     else:
-                        wordFreq[snt[i - 2: i + 1]] = 1
+                        wordFreq[hashRes][snt[i - 2: i + 1]] = 1
         cnt += 1
         if cnt % interval == 0:
             with lock:
@@ -100,34 +109,63 @@ def processList(args, corpus, wordSet, processID, total, processCnt, lock, inter
             cnt = 0
     return wordFreq
 
+def integrateWordFreq(args, freqList, num):
+    logger = getLogger(args, "integrating" + str(num))
+    wordFreq = dict()
+    cnt = total = 0
+    for data in freqList:
+        total += len(data)
+    for data in freqList:
+        for key in data:
+            if key in wordFreq:
+                wordFreq[key] += data[key]
+            else:
+                wordFreq[key] = data[key]
+            cnt += 1
+            if cnt % (args.report_interval * 100) == 0:
+                logger.info("integrated %d / %d entries", cnt, total)
+    logger.info("integrated %d / %d entries", cnt, total)
+    return wordFreq
+
 def process(args, corpus, wordSet, logger):
     processingArg = []
     segment = []
     manager = Manager()
     processCnt = manager.Value('d', 0)
     lock = manager.Lock()
-    batchSize = min(args.max_batch_size, int(len(corpus) / args.max_process) + 1)
+    batchSize = min(args.max_batch_size, int(len(corpus) / min(args.max_process, cpu_count())) + 1)
     for i in range(int(len(corpus) / batchSize) + 1):
         l = i * batchSize
         r = min(len(corpus), l + batchSize)
         processingArg.append((args, corpus[l:r], wordSet, i, len(corpus), processCnt, lock, args.report_interval))
         segment.append([l, r])
-    wordFreq = dict()
     with Pool(processes=min(args.max_process, cpu_count())) as pool:
         dataList = pool.starmap(processList, processingArg)
         logger.info("All %d sentences successfully processed", len(corpus))
-        logger.info("Start integrating processes...")
-        for i in range(len(dataList)):
-            data = Counter(dataList[i])
-            wordFreq = dict(Counter(wordFreq) + data)
-            logger.info("process %d integrated", i)
+    processingArg = []
+    for i in range(args.hash_mod):
+        dictList = []
+        for j in range(len(dataList)):
+            dictList.append(dataList[j][i])
+        processingArg.append((args, dictList, i))
+    logger.info("Start integrating processes...")
+
+    with Pool(processes=min(args.max_process, cpu_count())) as pool1:
+        dataList = pool1.starmap(integrateWordFreq, processingArg)
         logger.info("All data cleaned")
-    return wordFreq
+    return dataList
 
 def trainOnCorpus(args, wordSet):
     logger = getLogger(args, "corpus")
-    wordFreq = readJsonFile(args.word_freq, encoding="utf8")
-    logger.info("successfully loaded %d entries from %s", len(wordFreq), args.word_freq)
+    processingArg = []
+    totalWordFreq = 0
+    for i in range(args.hash_mod):
+        processingArg.append((args.word_freq + "wordFreq" + str(i) + ".txt", "utf8"))
+    with Pool(processes=min(args.max_process, cpu_count())) as pool:
+        wordFreq = pool.starmap(readJsonFile, processingArg)
+        for item in wordFreq:
+            totalWordFreq += len(item)
+    logger.info("successfully loaded %d entries from %s", totalWordFreq, args.word_freq)
     corpus = []
     if args.sina_news:
         corpus += loadSinaCorpus(args, logger)
@@ -136,19 +174,28 @@ def trainOnCorpus(args, wordSet):
     if args.wiki:
         corpus += loadWikiCorpus(args, logger)
     if len(corpus) > 0:
+        random.shuffle(corpus)
         logger.info("%d sentences in total", len(corpus))
         deltaFreq = process(args, corpus, wordSet, logger)
-        if len(wordFreq) == 0:
+        if totalWordFreq == 0:
             wordFreq = deltaFreq
         else:
             logger.info("start integrating")
             log = getLogger(args, "integrateTqdm", False)
             log.addHandler(TqdmLoggingHandler())
-            for key, i in zip(deltaFreq, tqdm.tqdm(range(len(deltaFreq)))):
-                if key in wordFreq:
-                    wordFreq[key] += deltaFreq[key]
-                else:
-                    wordFreq[key] = deltaFreq[key]
+            for j in range(args.hash_mod):
+                for key, _ in zip(deltaFreq[j], tqdm.tqdm(range(len(deltaFreq[j])))):
+                    if key in wordFreq[j]:
+                        wordFreq[j][key] += deltaFreq[j][key]
+                    else:
+                        wordFreq[j][key] = deltaFreq[j][key]
         logger.info("All data integrated with loaded frequency")
-    writeJsonFile(args.word_freq, wordFreq, encoding="utf8")
-    logger.info("successfully writed %d entries to word frequency file", len(wordFreq))
+    logger.info("start writing entries to %s", args.word_freq)
+    processingArg = []
+    totalWordFreq = 0
+    for i in range(args.hash_mod):
+        processingArg.append((args.word_freq + "wordFreq" + str(i) + ".txt", wordFreq[i], "utf8"))
+        totalWordFreq += len(wordFreq[i])
+    with Pool(processes=min(args.max_process, cpu_count())) as p:
+        wordFreq = p.starmap(writeJsonFile, processingArg)
+    logger.info("successfully writed loaded %d entries to word frequency files", totalWordFreq)
