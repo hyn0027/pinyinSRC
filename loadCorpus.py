@@ -60,10 +60,16 @@ def loadWikiCorpus(args, logger):
                 logger.error("failed to read valid json from file %s", fileList[i])
                 exit(-1)
             wikiCorpus += data
+    
+    if args.only_title:
+        for i in range(len(wikiCorpus)):
+            wikiCorpus[i] = wikiCorpus[i]["title"]
+        logger.info("loading finished, %d sentences ready from wiki-zh Corpus", len(wikiCorpus))
+        return wikiCorpus
     title = []
     for i in range(len(wikiCorpus)):
-        title.append(wikiCorpus[i]["title"])
         wikiCorpus[i] = wikiCorpus[i]["text"]
+        title.append(wikiCorpus[i]["title"])
     logger.info("loading finished, %d sentences ready from wiki-zh Corpus", len(wikiCorpus))
     return wikiCorpus + title
 
