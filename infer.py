@@ -50,7 +50,7 @@ def loss(args, char1, char2, pinyin2, wordDict, wordFreq, dictionary):
         pPinyin = 1
     return -log(max(p * pPinyin, args.epsilon))
 
-def tripleLoss(args, words, pinyin, wordDict, wordFreq, dictionary):
+def tripleLoss(args, words, pinyin, wordDict, wordFreq, dictionary, pinyin0):
     sumOfPinyin3 = 0
     for item in wordDict[pinyin]:
         sumOfPinyin3 += checkFreq(args, wordFreq, item)
@@ -102,7 +102,7 @@ def inferSingle(args, snt, wordDict, wordFreq, dictionary):
             dist = [dict()]
             point = [dict()]
             for word in wordDict[snt[0]]:
-                dist[0][word] = tripleLoss(args, "  " + word, snt[0], wordDict, wordFreq, dictionary)
+                dist[0][word] = tripleLoss(args, "  " + word, snt[0], wordDict, wordFreq, dictionary, "")
                 point[0][word] = None
             for word in wordDict[snt[1]]:
                 dist.append(dict())
@@ -110,7 +110,7 @@ def inferSingle(args, snt, wordDict, wordFreq, dictionary):
                 dist[1][word] = args.inf
                 point[1][word] = None
                 for char1 in dist[0]:
-                    l = tripleLoss(args, " " + char1 + word, snt[1], wordDict, wordFreq, dictionary)
+                    l = tripleLoss(args, " " + char1 + word, snt[1], wordDict, wordFreq, dictionary, snt[0])
                     if dist[0][char1] + l < dist[1][word]:
                         dist[1][word] = dist[0][char1] + l
                         point[1][word] = char1
@@ -121,7 +121,7 @@ def inferSingle(args, snt, wordDict, wordFreq, dictionary):
                     dist[idx][char3] = args.inf
                     point[idx][char3] = None
                     for char2 in dist[idx - 1]:
-                        l = tripleLoss(args, point[idx - 1][char2] + char2 + char3, snt[idx], wordDict, wordFreq, dictionary)
+                        l = tripleLoss(args, point[idx - 1][char2] + char2 + char3, snt[idx], wordDict, wordFreq, dictionary, snt[idx - 1])
                         if dist[idx - 1][char2] + l < dist[idx][char3]:
                             dist[idx][char3] = dist[idx - 1][char2] + l
                             point[idx][char3] = char2
@@ -150,14 +150,15 @@ def infer(args, wordDict):
             totalWordFreq += len(item)
     logger.info("successfully loaded %d entries from %s", totalWordFreq, args.word_freq)
 
-    tmp_dictionary = readJsonFile(args.word_freq + "/pronounce.txt", encoding="utf8")
     dictionary = dict()
-    for pronounciation in tmp_dictionary:
-        for word in tmp_dictionary[pronounciation]:
-            if not word in dictionary:
-                dictionary[word] = dict()
-            dictionary[word][pronounciation] = tmp_dictionary[pronounciation][word]
-    logger.info("successfully loaded dictionary from %s", args.word_freq + "/pronounce.txt")
+    if args.add_dict:
+        tmp_dictionary = readJsonFile(args.word_freq + "/pronounce.txt", encoding="utf8")
+        for pronounciation in tmp_dictionary:
+            for word in tmp_dictionary[pronounciation]:
+                if not word in dictionary:
+                    dictionary[word] = dict()
+                dictionary[word][pronounciation] = tmp_dictionary[pronounciation][word]
+        logger.info("successfully loaded dictionary from %s", args.word_freq + "/pronounce.txt")
 
     input = loadInput(args)
     logger.info("begin inferring")

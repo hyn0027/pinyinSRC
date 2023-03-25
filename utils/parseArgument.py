@@ -39,15 +39,15 @@ def addArg(parser):
                         help="the Chinese output file")
     parser.add_argument("--smooth-lambda", type=float, default=0.99995, \
                         help="hyper-parameter for smoothing, should lies in [0, 1]")
-    parser.add_argument("--smooth-lambda1", type=float, default=0.73, \
+    parser.add_argument("--smooth-lambda1", type=float, default=0.72, \
                         help="hyper-parameter for smoothing, should lies in [0, 1]")
-    parser.add_argument("--smooth-lambda2", type=float, default=0.26995, \
+    parser.add_argument("--smooth-lambda2", type=float, default=0.2795, \
                         help="hyper-parameter for smoothing, should lies in [0, 1]")
     parser.add_argument("--epsilon", type=float, default=0.000000001, \
                         help="the smallest absolute value")
     parser.add_argument("--inf", type=float, default = 1e16, \
                         help="the infinitelt long path")
-    parser.add_argument("--infer-num", choices=[2, 3], default=3, \
+    parser.add_argument("--infer-num", type=int, choices=[2, 3], default=2, \
                         help="inferring based on word pairs or word triplets ")
     parser.add_argument("--hash-mod", default=20, \
                         help="a factor for hash")
@@ -57,7 +57,7 @@ def addArg(parser):
                         help="only use title from corpus wiki-zh")
     parser.add_argument("--dictionary", default="../corpus/pinyin.txt", \
                         help="the path to dictionary")
-    parser.add_argument("--add-dict", type=bool, default=True, \
+    parser.add_argument("--add-dict", type=bool, default=False, \
                         help="whether to use pinyin frequency from dictionary or not")
     parser.add_argument("--dict-smooth", type=float, default=0.1, \
                         help="to what extent the effect of dictionary is smoothed")
