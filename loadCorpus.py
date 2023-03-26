@@ -62,7 +62,7 @@ def loadBaikeCorpus(args, logger):
             baikeCorpus += data
     for i in range(len(baikeCorpus)):
         baikeCorpus[i] = baikeCorpus[i]["desc"] + " " + baikeCorpus[i]["answer"]
-    logger.info("loading finished, %d sentences ready from SMP Corpus", len(baikeCorpus))
+    logger.info("loading finished, %d sentences ready from baike Corpus", len(baikeCorpus))
     return baikeCorpus
 
 def loadWikiCorpus(args, logger):
