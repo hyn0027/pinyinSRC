@@ -90,8 +90,8 @@ def loadWikiCorpus(args, logger):
         return wikiCorpus
     title = []
     for i in range(len(wikiCorpus)):
-        wikiCorpus[i] = wikiCorpus[i]["text"]
         title.append(wikiCorpus[i]["title"])
+        wikiCorpus[i] = wikiCorpus[i]["text"]
     logger.info("loading finished, %d sentences ready from wiki-zh Corpus", len(wikiCorpus))
     return wikiCorpus + title
 
